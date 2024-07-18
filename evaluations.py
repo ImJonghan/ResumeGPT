@@ -1,7 +1,25 @@
 import json
 import streamlit as st
+from chromadb import HttpClient
+import uuid
+
+chroma_client = HttpClient(host='hanslab.org', port=48000)
+
+def chroma_log(client, user_input, content_data):
+    try:
+        collection = chroma_client.get_collection(name="lion9_resume")
+    except Exception as e:
+        collection = chroma_client.create_collection(name="lion9_resume")
+
+    collection.add(
+        documents=[user_input],
+        metadatas=[{"content_data": content_data}],        
+        ids=[str(uuid.uuid4())]
+    )
+
 with open('evaluation_criteria.json', 'r', encoding='utf8') as file:
     evaluation_criteria = json.load(file)
+
 def evaluate_intro(client, GPT_MODEL, user_input):
     intro_standard = evaluation_criteria['intro']['standard']
     messages = [
@@ -16,6 +34,7 @@ def evaluate_intro(client, GPT_MODEL, user_input):
         temperature=0.5
     )
     content_data = json.loads(response.choices[0].message.content)
+    chroma_log(user_input, json.dumps(content_data))
     return content_data
 
 
@@ -34,6 +53,7 @@ def evaluate_skill_stack(client, GPT_MODEL, company_skills, user_input):
                 temperature=0.5
             )
     content_data = json.loads(response.choices[0].message.content)
+    chroma_log(user_input, content_data)
     return content_data
 
 def evaluate_project_experience(client, GPT_MODEL, user_input):
@@ -50,6 +70,7 @@ def evaluate_project_experience(client, GPT_MODEL, user_input):
         temperature=0.5
     )
     content_data = json.loads(response.choices[0].message.content)
+    chroma_log(user_input, content_data)
     return content_data
 
 def display_evaluation_results(evaluation):
